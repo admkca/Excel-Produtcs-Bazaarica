@@ -1,4 +1,4 @@
-# Bazaarica Excel Products
+# Bazaarica Excel Products   #https://bazaarica-excel-products.netlify.app/
 
 ## 📅 Proje Amacı
 Bu proje, Excel dosyasından ürün bilgilerini (barkod, ürün ismi ve resimler) hızlı bir şekilde web ortamına aktarıp yönetebilmek için geliştirildi. 
