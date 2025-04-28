@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bazaarica Excel Products</title>
+
+    <!-- Bootstrap ve Kütüphaneler -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/exceljs/dist/exceljs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <style>
+      body { background-color: #f8f9fa; }
+      .container { max-width: 1400px !important; }
+      .card-custom { background: #ffffff; border-radius: 1rem; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); padding: 2rem; }
+      .image-flex { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 20px; }
+      .image-container { position: relative; width: 100px; height: 120px; }
+      .image-container img { width: 100%; height: auto; border-radius: 8px; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15); cursor: pointer; }
+      .remove-btn { position: absolute; top: -8px; right: -8px; background: red; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 14px; line-height: 17px; text-align: center; cursor: pointer; }
+      .remove-btn:hover { background: darkred; }
+    </style>
+  </head>
+
+  <body>
+    <div class="container py-5">
+      <div class="card card-custom">
+        <h1 class="mb-4 text-center">Bazaarica Excel Products 📦</h1>
+        <div class="row mb-4">
+          <div class="col-md-5">
+            <input type="text" id="searchInput" class="form-control form-control-lg" placeholder="🔎 Ürün veya Barcode Ara..." />
+          </div>
+          <div class="col-md-3">
+            <select id="searchType" class="form-select form-select-lg">
+              <option value="barcode">Barcode ile Ara</option>
+              <option value="name">İsim ile Ara</option>
+            </select>
+          </div>
+          <div class="col-md-4 text-end">
+            <button id="exportBtn" class="btn btn-success btn-lg">📂 Excel Olarak Dışa Aktar</button>
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <input type="file" id="excelFile" class="form-control form-control-lg" accept=".xlsx, .xls" />
+        </div>
+
+        <div class="row mb-4">
+          <div class="col-md-6">
+            <strong id="executionTime">Upload + Update Süreci: -</strong>
+          </div>
+          <div class="col-md-6 text-end">
+            <span id="productCount"></span>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <div id="loadOptions" class="mb-3 text-center" style="display: none">
+            <button class="btn btn-primary btn-sm m-1" onclick="loadProducts(50)">İlk 50'yi Getir</button>
+            <button class="btn btn-primary btn-sm m-1" onclick="loadProducts(100)">İlk 100'ü Getir</button>
+            <button class="btn btn-success btn-sm m-1" onclick="loadProducts()">Tümünü Getir</button>
+          </div>
+          <table class="table table-hover table-striped align-middle text-center" id="productTable">
+            <thead class="table-dark">
+              <tr>
+                <th>Barcode</th>
+                <th>Barcode + Name</th>
+                <th>Görseller</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="imageModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 id="modalTitle" class="modal-title"></h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body text-center">
+            <img id="modalImage" src="" class="img-fluid" alt="Büyük Resim" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const excelFileInput = document.getElementById("excelFile");
+      const productTableBody = document.querySelector("#productTable tbody");
+      const executionTimeEl = document.getElementById("executionTime");
+      const productCountEl = document.getElementById("productCount");
+      const loadOptions = document.getElementById("loadOptions");
+      const exportBtn = document.getElementById("exportBtn");
+      const searchInput = document.getElementById("searchInput");
+      const searchType = document.getElementById("searchType");
+
+      let loadedData = [];
+
+      excelFileInput.addEventListener("change", async (e) => {
+        const startTime = performance.now();
+        const file = e.target.files[0];
+        if (!file) return;
+
+        productTableBody.innerHTML = "";
+        productCountEl.textContent = "";
+
+        const data = await file.arrayBuffer();
+        const workbook = XLSX.read(data);
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+        loadedData = jsonData;
+
+        const endTime = performance.now();
+        const executionTime = ((endTime - startTime) / 1000).toFixed(2);
+        executionTimeEl.textContent = `Upload + Update Süreci: ${executionTime} saniye`;
+
+        loadOptions.style.display = "block";
+        loadProducts();
+      });
+
+      function loadProducts(limit) {
+        productTableBody.innerHTML = "";
+
+        const selectedData = limit ? loadedData.slice(0, limit) : loadedData;
+
+        selectedData.forEach((product) => {
+          const searchText = product["Search Text"] || "";
+          const barcode = searchText.split(" ")[0] || "";
+
+          const image1 = product["Text Img1"] && !product["Text Img1"].includes("FAILED") ? product["Text Img1"] : "";
+          const image2 = product["Text Img2"] && !product["Text Img2"].includes("FAILED") ? product["Text Img2"] : "";
+          const image3 = product["Text Img3"] && !product["Text Img3"].includes("FAILED") ? product["Text Img3"] : "";
+
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td>${barcode}</td>
+            <td>${searchText}</td>
+            <td class="image-flex">
+              ${createImageDiv(image1, searchText)}
+              ${createImageDiv(image2, searchText)}
+              ${createImageDiv(image3, searchText)}
+            </td>
+          `;
+          productTableBody.appendChild(row);
+        });
+
+        productCountEl.textContent = `Toplam ${selectedData.length} ürün yüklendi.`;
+      }
+
+      function createImageDiv(imageUrl, productName) {
+        if (!imageUrl) return "";
+        return `
+          <div class="image-container">
+            <button class="remove-btn" onclick="removeImage(this)">×</button>
+            <img src="${imageUrl}" onclick="openModal('${imageUrl}', '${productName}')" />
+          </div>
+        `;
+      }
+
+      function removeImage(btn) {
+        btn.parentElement.remove();
+      }
+
+      function openModal(imageUrl, title) {
+        const modalImage = document.getElementById("modalImage");
+        const modalTitle = document.getElementById("modalTitle");
+        modalImage.src = imageUrl;
+        modalTitle.textContent = title || "";
+
+        const imageModal = new bootstrap.Modal(document.getElementById("imageModal"));
+        imageModal.show();
+      }
+
+      searchInput.addEventListener("input", filterProducts);
+      searchType.addEventListener("change", filterProducts);
+
+      function filterProducts() {
+        const query = searchInput.value.toLowerCase();
+        const type = searchType.value;
+
+        const rows = document.querySelectorAll("#productTable tbody tr");
+
+        rows.forEach((row) => {
+          const barcode = row.children[0]?.textContent.toLowerCase();
+          const name = row.children[1]?.textContent.toLowerCase();
+
+          let showRow = false;
+          if (type === "barcode") {
+            showRow = barcode.includes(query);
+          } else if (type === "name") {
+            showRow = name.includes(query);
+          }
+
+          row.style.display = showRow ? "" : "none";
+        });
+      }
+
+      exportBtn.addEventListener("click", async () => {
+        const rows = document.querySelectorAll("#productTable tbody tr");
+        if (rows.length === 0) {
+          alert("Export edilecek ürün bulunamadı!");
+          return;
+        }
+
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet("Ürünler");
+
+        worksheet.columns = [
+          { header: "Barcode", key: "barcode", width: 20 },
+          { header: "Product Name", key: "productName", width: 50 },
+          { header: "Image 1", key: "img1", width: 50 },
+          { header: "Image 2", key: "img2", width: 50 },
+          { header: "Image 3", key: "img3", width: 50 },
+        ];
+
+        rows.forEach((row) => {
+          if (row.style.display === "none") return;
+
+          const barcode = row.children[0]?.textContent.trim();
+          const fullProductName = row.children[1]?.textContent.trim();
+          const imagesDiv = row.children[2];
+          const images = imagesDiv.querySelectorAll("img");
+
+          const newRow = worksheet.addRow({ barcode, productName: fullProductName });
+
+          if (images[0]) worksheet.getCell(`C${newRow.number}`).value = { text: images[0].src, hyperlink: images[0].src };
+          if (images[1]) worksheet.getCell(`D${newRow.number}`).value = { text: images[1].src, hyperlink: images[1].src };
+          if (images[2]) worksheet.getCell(`E${newRow.number}`).value = { text: images[2].src, hyperlink: images[2].src };
+        });
+
+        const today = new Date();
+        const dateString = today.getFullYear() + "-" + String(today.getMonth() + 1).padStart(2, "0") + "-" + String(today.getDate()).padStart(2, "0");
+        const filename = `urunler-${dateString}.xlsx`;
+
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+        const url = window.URL.createObjectURL(blob);
+
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        a.click();
+        window.URL.revokeObjectURL(url);
+      });
+    </script>
+  </body>
+</html>
