@@ -29,11 +29,6 @@ Kullanıcılar bir Excel dosyası yükleyerek ürünlerini listeleyebilir, ürü
 
 **Not:** Proje tamamiyle frontend (ön yüz) tabanlıdır. Herhangi bir backend sunucu gerektirmez.
 
-## 🌐 Deploy Edilme (Canlıya Alma)
-Projeyi canlıya almak için Netlify, Vercel veya GitHub Pages gibi platformları kullanabilirsin.
-
-📌 Önerilen Yöntem:
-- [Netlify](https://www.netlify.com/): Projeyi sürükle-bırak yöntemiyle veya GitHub entegrasyonu ile kolayca yayına alabilirsin.
 
 ## 📍 Yapı
 ```
